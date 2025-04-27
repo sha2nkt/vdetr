@@ -161,7 +161,7 @@ def evaluate(
             "point_cloud_dims_max": batch_data_label["point_cloud_dims_max"],
         }
 
-        outputs = model(inputs)
+        outputs, enc_xyz, query_xyz = model(inputs)
 
         # Compute loss
         loss_str = ""
