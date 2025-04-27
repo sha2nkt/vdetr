@@ -653,7 +653,17 @@ class ScannetDetectionDataset(Dataset):
         batch_dict = {}
         for key in batch[0].keys():
             if isinstance(batch[0][key], np.ndarray):
-                batch_dict[key] = torch.stack([torch.from_numpy(sample[key]) for sample in batch],dim=0)
+                shapes = [sample[key].shape for sample in batch]
+                if all(shape == shapes[0] for shape in shapes):
+                    batch_dict[key] = torch.stack([torch.from_numpy(sample[key]) for sample in batch], dim=0)
+                else:
+                    batch_dict[key] = [torch.from_numpy(sample[key]) for sample in batch]
+            elif isinstance(batch[0][key], torch.Tensor):
+                shapes = [sample[key].shape for sample in batch]
+                if all(shape == shapes[0] for shape in shapes):
+                    batch_dict[key] = torch.stack([sample[key] for sample in batch], dim=0)
+                else:
+                    batch_dict[key] = [sample[key] for sample in batch]
             else:
                 batch_dict[key] = [sample[key] for sample in batch]
 

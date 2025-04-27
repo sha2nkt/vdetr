@@ -21,7 +21,7 @@ except:
     sys.exit(-1)
 
 currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-import scannet_utils
+import vdetr.scannet.scannet_utils as scannet_utils
 
 def read_aggregation(filename):
     assert os.path.isfile(filename)

@@ -84,6 +84,12 @@ python main.py \
 --test_only --test_ckpt $ckpt_path \
 --auto_test
 ```
+
+eg:
+```
+python vdetr/main.py --dataset_name scannet --dataset_root_dir votenet/scannet/scannet_train_detection_data_large_objects/ --meta_data_dir votenet/scannet/meta_data/ --test_only --test_ckpt vdetr/ckpt/vdetr_original/scannet_540ep.pth --auto_test
+```
+
 please add `--auto_test`, which can auto load the arguments of the checkpoint, and will use to initial the model and others. 
 
 | Dataset | mAP@0.25(no TTA) | mAP@0.5(no TTA) | details | ckpt |

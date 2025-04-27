@@ -21,6 +21,9 @@ from utils.io import save_checkpoint, resume_if_possible
 
 import wandb
 
+if "MASTER_PORT" not in os.environ:
+    os.environ["MASTER_PORT"] = str(12355 + np.random.randint(0, 1000))
+
 
 def wandb_log(*args, **kwargs):
     if is_primary():
@@ -583,6 +586,12 @@ def main(local_rank, args):
             dataloaders,
             best_val_metrics,
         )
+
+    if is_distributed():
+        torch.distributed.destroy_process_group()
+
+    if args.wandb_activate:
+        wandb.finish()
 
 
 def launch_distributed(args):
