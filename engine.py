@@ -90,7 +90,7 @@ def train_one_epoch(
         }
         if args.use_superpoint:
             inputs["superpoint_per_point"] = batch_data_label["superpoint_labels"]
-        outputs = model(inputs)
+        outputs, enc_xyz, query_xyz = model(inputs)
         # Compute loss
         loss, loss_dict = criterion(outputs, batch_data_label)
         

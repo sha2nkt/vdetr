@@ -13,9 +13,9 @@ import torch.nn as nn
 import copy
 import numpy as np
 import torch.nn.functional as F
-from utils.box_util import generalized_box3d_iou
-from utils.dist import all_reduce_average
-from utils.misc import huber_loss
+from vdetr.utils.box_util import generalized_box3d_iou
+from vdetr.utils.dist import all_reduce_average
+from vdetr.utils.misc import huber_loss
 from scipy.optimize import linear_sum_assignment
 from mmcv.ops import points_in_boxes_all
 from mmcv.ops import diff_iou_rotated_3d

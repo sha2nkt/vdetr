@@ -7,12 +7,12 @@ import torch
 import torch.nn as nn
 import MinkowskiEngine as ME
 
-from third_party.pointnet2.pointnet2_utils import furthest_point_sample
-import third_party.pointnet2.pointnet2_utils as pointnet2_utils
-from models.mink_resnet import MinkResNet
-from models.helpers import (GenericMLP, PositionEmbeddingLearned)
-from models.position_embedding import PositionEmbeddingCoordsSine
-from models.vdetr_transformer import (TransformerDecoder, GlobalDecoderLayer, FFNLayer)
+from vdetr.third_party.pointnet2.pointnet2_utils import furthest_point_sample
+import vdetr.third_party.pointnet2.pointnet2_utils as pointnet2_utils
+from vdetr.models.mink_resnet import MinkResNet
+from vdetr.models.helpers import (GenericMLP, PositionEmbeddingLearned)
+from vdetr.models.position_embedding import PositionEmbeddingCoordsSine
+from vdetr.models.vdetr_transformer import (TransformerDecoder, GlobalDecoderLayer, FFNLayer)
 
 
 class FPSModule(nn.Module):
@@ -84,10 +84,15 @@ class ModelVDETR(nn.Module):
         self.proj_nohid = proj_nohid
         self.woexpand_conv = woexpand_conv
         self.npoint = npoint
-        self.random_fps = args.random_fps
+        self.random_fps = True
         self.use_color = args.use_color
         self.xyz_color = args.xyz_color
-        
+        # check if add_vlm_question_in_vdetr in args
+        if hasattr(args, "add_vlm_question_in_vdetr"):
+            self.add_vlm_question = args.add_vlm_question_in_vdetr
+        else:
+            self.add_vlm_question = False
+
         if self.minkowski:
             self.fps_module = FPSModule()
             backbone_channels = [4 * inplane * 2**i for i in range(self.num_stages)] if args.depth > 34 \
@@ -256,8 +261,8 @@ class ModelVDETR(nn.Module):
                     [(p[:, :3] / self.voxel_size, p[:, 3:]) for p in point_clouds])
         else:
             coordinates, features = ME.utils.batch_sparse_collate(
-                [(p[:, :3] / self.voxel_size, p[:, :3]) for p in xyz])
-    
+                [(p[:, :3] / self.voxel_size, p[:, :3]) for p in point_clouds])
+
         origin_voxel = ME.SparseTensor(coordinates=coordinates, features=features)
         x = self.pre_encoder(origin_voxel)
         batch_num = origin_voxel.C[:,0].max().long() + 1
@@ -325,7 +330,7 @@ class ModelVDETR(nn.Module):
 
         return enc_xyz, enc_features, enc_inds
 
-    def forward(self, inputs, encoder_only=False):
+    def forward(self, inputs, encoder_only=False, sampling='random'):
         point_clouds = inputs["point_clouds"]
         point_cloud_dims = [
             inputs["point_cloud_dims_min"],
@@ -366,6 +371,12 @@ class ModelVDETR(nn.Module):
         else:
             tgt = None
 
+        if self.add_vlm_question:
+            import ipdb; ipdb.set_trace()
+            # combine question features with query
+            question_feat = inputs["question_feat"]
+            query_embed = query_embed + question_feat[:, None, :]
+
         enc_box_features = enc_features
         box_predictions = self.decoder(
             tgt, enc_features, query_xyz, enc_xyz, point_cloud_dims, 
@@ -378,7 +389,7 @@ class ModelVDETR(nn.Module):
         box_predictions['seed_xyz'] = enc_xyz            
         if enc_box_predictions is not None:
             box_predictions["enc_outputs"] = enc_box_predictions
-        return box_predictions
+        return box_predictions, enc_xyz, query_xyz
 
 def convert_unnorm2norm(xyz_unnorm,point_cloud_dims,with_offset=True):
     scene_size = point_cloud_dims[1]-point_cloud_dims[0] #bs,3

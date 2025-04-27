@@ -5,12 +5,12 @@ import json
 import numpy as np
 import torch
 from torch.utils.data import Dataset
-import utils.pc_util as pc_util
-from utils.box_util import (flip_axis_to_camera_np, flip_axis_to_camera_tensor,
+import vdetr.utils.pc_util as pc_util
+from vdetr.utils.box_util import (flip_axis_to_camera_np, flip_axis_to_camera_tensor,
                             get_3d_box_batch_np, get_3d_box_batch_tensor)
 
-from utils.pc_util import scale_points, shift_scale_points
-from utils.random_cuboid import RandomCuboid
+from vdetr.utils.pc_util import scale_points, shift_scale_points
+from vdetr.utils.random_cuboid import RandomCuboid
 import json
 import math
 from plyfile import PlyData, PlyElement

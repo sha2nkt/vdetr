@@ -12,11 +12,11 @@ import torch.nn.functional as F
 import torch.distributed as dist
 from mmcv.ops import points_in_boxes_all
                               
-from models.position_embedding import PositionEmbeddingCoordsSine           
-from models.helpers import (ACTIVATION_DICT, NORM_DICT, WEIGHT_INIT_DICT, 
+from vdetr.models.position_embedding import PositionEmbeddingCoordsSine
+from vdetr.models.helpers import (ACTIVATION_DICT, NORM_DICT, WEIGHT_INIT_DICT,
                             GenericMLP, get_clones, PositionEmbeddingLearned)
 
-from utils.pc_util import scale_points, shift_scale_points
+from vdetr.utils.pc_util import scale_points, shift_scale_points
 class BoxProcessor(object):
     """
     Class to convert V-DETR MLP head outputs into bounding boxes
