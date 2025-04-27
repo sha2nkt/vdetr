@@ -7,7 +7,12 @@ import torch
 import torch.nn as nn
 import MinkowskiEngine as ME
 
+from vdetr.third_party.pointnet2.pointnet2_utils import furthest_point_sample
+import vdetr.third_party.pointnet2.pointnet2_utils as pointnet2_utils
 from vdetr.models.mink_resnet import MinkResNet
+from vdetr.models.helpers import (GenericMLP, PositionEmbeddingLearned)
+from vdetr.models.position_embedding import PositionEmbeddingCoordsSine
+from vdetr.models.vdetr_transformer import (TransformerDecoder, GlobalDecoderLayer, FFNLayer)
 
 
 class FPSModule(nn.Module):
@@ -256,7 +261,8 @@ class ModelVDETR(nn.Module):
                     [(p[:, :3] / self.voxel_size, p[:, 3:]) for p in point_clouds])
         else:
             coordinates, features = ME.utils.batch_sparse_collate(
-    
+                [(p[:, :3] / self.voxel_size, p[:, :3]) for p in point_clouds])
+        origin_voxel = ME.SparseTensor(coordinates=coordinates, features=features).float()
         x = self.pre_encoder(origin_voxel)
         batch_num = origin_voxel.C[:,0].max().long() + 1
         inputs = x
