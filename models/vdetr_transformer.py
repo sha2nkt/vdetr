@@ -17,6 +17,9 @@ from vdetr.models.helpers import (ACTIVATION_DICT, NORM_DICT, WEIGHT_INIT_DICT,
                             GenericMLP, get_clones, PositionEmbeddingLearned)
 
 from vdetr.utils.pc_util import scale_points, shift_scale_points
+from vdetr.utils.box_util import (flip_axis_to_camera_np, flip_axis_to_camera_tensor,
+                            get_3d_box_batch_np, get_3d_box_batch_tensor)
+
 class BoxProcessor(object):
     """
     Class to convert V-DETR MLP head outputs into bounding boxes
@@ -82,12 +85,17 @@ class BoxProcessor(object):
             objectness_prob = 1 - cls_prob[..., -1]
             return cls_prob[..., :-1], objectness_prob
 
-    def box_parametrization_to_corners(
-        self, box_center_unnorm, box_size_unnorm, box_angle
-    ):
-        return self.dataset_config.box_parametrization_to_corners(
-            box_center_unnorm, box_size_unnorm, box_angle
-        )
+    # def box_parametrization_to_corners(
+    #     self, box_center_unnorm, box_size_unnorm, box_angle
+    # ):
+    #     return self.dataset_config.box_parametrization_to_corners(
+    #         box_center_unnorm, box_size_unnorm, box_angle
+    #     )
+
+    def box_parametrization_to_corners(self, box_center_unnorm, box_size, box_angle):
+        box_center_upright = flip_axis_to_camera_tensor(box_center_unnorm)
+        boxes = get_3d_box_batch_tensor(box_size, box_angle, box_center_upright)
+        return boxes
 
 def inverse_sigmoid(x, eps=1e-5):
     x = x.clamp(min=0, max=1)
@@ -343,6 +351,7 @@ class TransformerDecoder(nn.Module):
                 return_attn_weights: Optional [bool] = False,
                 enc_box_predictions: Optional[Tensor] = None,
                 enc_box_features: Optional[Tensor] = None,
+                vlm_question_features: Optional[Tensor] = None,
                 ):
         
         intermediate = []
@@ -403,6 +412,8 @@ class TransformerDecoder(nn.Module):
         elif self.q_content == 'random_add':
             output = output + self.query_embed.weight.unsqueeze(1).repeat(1, output.shape[1], 1)                
 
+        if vlm_question_features is not None:
+            output = output + vlm_question_features[None, :, :]
 
         for idx, layer in enumerate(self.layers):
             if not idx == 0:

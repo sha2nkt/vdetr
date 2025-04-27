@@ -263,7 +263,7 @@ class ModelVDETR(nn.Module):
             coordinates, features = ME.utils.batch_sparse_collate(
                 [(p[:, :3] / self.voxel_size, p[:, :3]) for p in point_clouds])
 
-        origin_voxel = ME.SparseTensor(coordinates=coordinates, features=features)
+        origin_voxel = ME.SparseTensor(coordinates=coordinates, features=features).float()
         x = self.pre_encoder(origin_voxel)
         batch_num = origin_voxel.C[:,0].max().long() + 1
         inputs = x
@@ -338,7 +338,13 @@ class ModelVDETR(nn.Module):
         ]
         
         enc_xyz, enc_features, enc_inds = self.run_encoder(point_clouds)
-                    
+
+        # convert back to bfloat26 if input was bfloat16
+        if enc_features.dtype is not point_clouds.dtype:
+            enc_features = enc_features.to(point_clouds.dtype)
+        if enc_xyz.dtype is not point_clouds.dtype:
+            enc_xyz = enc_xyz.to(point_clouds.dtype)
+
         bs,npoints,_ = enc_xyz.shape
         enc_features = self.encoder_to_decoder_projection(
             enc_features.permute(1, 2, 0)
@@ -371,17 +377,12 @@ class ModelVDETR(nn.Module):
         else:
             tgt = None
 
-        if self.add_vlm_question:
-            import ipdb; ipdb.set_trace()
-            # combine question features with query
-            question_feat = inputs["question_feat"]
-            query_embed = query_embed + question_feat[:, None, :]
-
         enc_box_features = enc_features
         box_predictions = self.decoder(
             tgt, enc_features, query_xyz, enc_xyz, point_cloud_dims, 
             query_pos=query_embed, enc_box_predictions=enc_box_predictions,
             enc_box_features = enc_box_features,
+            vlm_question_features = inputs["question_feat"] if self.add_vlm_question else None,
         )[0]
 
         
