@@ -276,6 +276,9 @@ class SetCriterion(nn.Module):
             # cx, cy, cz, w, h, l, 0
             target_boxes[...,:,2] = target_boxes[...,:,2] - target_boxes[...,:,5] / 2  # bottom center
             seed_xyz = outputs['seed_xyz']
+            # convert target goxes to float if not already
+            target_boxes = target_boxes.float()
+            seed_xyz = seed_xyz.float()
             inbox_inds = points_in_boxes_all(seed_xyz,target_boxes) # bs, npoints, nboxes
             # select only one box if point in different boxes#size+argmin
             bs, npoints, nboxes = inbox_inds.shape
@@ -613,8 +616,11 @@ class SetCriterion(nn.Module):
             ] = batch_data_label_multi["gt_angle_residual_label"][b][valid_mask]
         
             for k in batch_data_label_multi.keys():
-                if k not in  ["nactual_gt","num_boxes","num_boxes_replica",'scan_idx']:
-                    batch_data_label_multi[k][b][valid_num:] = 0
+                if k not in  ["nactual_gt","num_boxes","num_boxes_replica",'scan_idx', 'video_id', 'prompt']:
+                    try:
+                        batch_data_label_multi[k][b][valid_num:] = 0
+                    except:
+                        import ipdb; ipdb.set_trace()
 
         nactual_gt = batch_data_label_multi["gt_box_present"].sum(axis=1).long()
         num_boxes = torch.clamp(all_reduce_average(nactual_gt.sum()), min=1).item()
@@ -693,7 +699,7 @@ class SetCriterion(nn.Module):
         if "aux_outputs" in outputs:
             for k in range(len(outputs["aux_outputs"])):
                 if k == 0 and self.is_bilable: #only to distinguish positive and negative
-                    bin_targets = copy.deepcopy(targets)
+                    bin_targets = self.clone_batch_data_label(targets)
                     bin_targets['gt_box_sem_cls_label'] = torch.zeros_like(targets['gt_box_sem_cls_label'])
                     interm_loss, interm_loss_dict = self.single_output_forward(
                         outputs["aux_outputs"][k], bin_targets,
