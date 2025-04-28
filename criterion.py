@@ -529,8 +529,17 @@ class SetCriterion(nn.Module):
 
         return {"loss_size": size_loss}
 
+    def clone_batch_data_label(self, batch_data_label):
+        cloned = {}
+        for key, value in batch_data_label.items():
+            if isinstance(value, torch.Tensor):
+                cloned[key] = value.clone()
+            else:
+                cloned[key] = value  # non-tensors can be kept as is
+        return cloned
+
     def repeat_ground_truth(self, maingt_repeat, batch_data_label):
-        batch_data_label_multi = copy.deepcopy(batch_data_label)
+        batch_data_label_multi = self.clone_batch_data_label(batch_data_label)
         batch_data_label_multi["gt_box_corners"] = batch_data_label_multi[
             "gt_box_corners"
         ].repeat(1, maingt_repeat, 1, 1)
@@ -565,7 +574,7 @@ class SetCriterion(nn.Module):
             "gt_angle_residual_label"
         ].repeat(1, maingt_repeat)
 
-        batch_size = batch_data_label_multi["scan_idx"].shape[0]
+        batch_size = batch_data_label_multi["gt_box_corners"].shape[0]
         for b in range(batch_size):
             valid_mask = batch_data_label_multi["gt_box_present"][b] > 0
             valid_num = valid_mask.sum()
